@@ -3,31 +3,29 @@ import 'package:flutter/gestures.dart';
 import '../theme/app_colors.dart';
 import '../utils/responsive.dart';
 import '../widgets/app_input_field.dart';
-import 'teacher_signup_screen.dart';
-import 'forgot_password_screen.dart';
+import 'teacher_signin_screen.dart';
 
-class TeacherSignInScreen extends StatefulWidget {
-  const TeacherSignInScreen({super.key});
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
 
   @override
-  State<TeacherSignInScreen> createState() => _TeacherSignInScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _TeacherSignInScreenState extends State<TeacherSignInScreen>
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     with SingleTickerProviderStateMixin {
-  final _formKey = GlobalKey<FormState>();
+  final _formKey        = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
 
-  // Controllers
-  final _emailController    = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  bool _obscurePassword = true;
-  bool _rememberMe      = false;
-  bool _isLoading       = false;
+  bool _isLoading  = false;
+  bool _emailSent  = false;
 
   late AnimationController _animController;
   late Animation<double>   _fadeAnim;
   late Animation<Offset>   _slideAnim;
+
+  // Success animation
+  late Animation<double> _successScaleAnim;
 
   // ─── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -43,8 +41,11 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(
+        parent: _animController, curve: Curves.easeOut));
+    _successScaleAnim = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.elasticOut),
+    );
     _animController.forward();
   }
 
@@ -52,33 +53,36 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
   void dispose() {
     _animController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
   // ─── Actions ────────────────────────────────────────────────────────────────
 
-  void _handleSignIn() async {
+  void _handleSendReset() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 2));
+    setState(() {
+      _isLoading = false;
+      _emailSent = true;
+    });
+    // Re-run animation for the success state
+    _animController.reset();
+    _animController.forward();
+  }
+
+  void _handleResend() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(seconds: 1));
     setState(() => _isLoading = false);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Signed in successfully! 🎉'),
+        content: const Text('Reset link resent successfully!'),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  void _handleForgotPassword() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ForgotPasswordScreen(),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -115,9 +119,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
   Widget _buildDesktopLayout(Responsive r) {
     return Row(
       children: [
-        // Left: branding panel
         Expanded(flex: 5, child: _buildBrandingPanel()),
-        // Right: form
         Expanded(
           flex: 6,
           child: Container(
@@ -133,9 +135,11 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
                     children: [
                       _buildHeader(r),
                       SizedBox(height: r.fieldSpacing * 1.8),
-                      _buildFormCard(r),
+                      _emailSent
+                          ? _buildSuccessCard(r)
+                          : _buildFormCard(r),
                       SizedBox(height: r.fieldSpacing),
-                      _buildSignUpRow(r),
+                      _buildBackToSignIn(r),
                     ],
                   ),
                 ),
@@ -159,6 +163,9 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
             : CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 28),
+          // Back button
+          _buildBackButton(),
+          const SizedBox(height: 16),
           if (r.isTablet)
             Center(
               child: ConstrainedBox(
@@ -173,15 +180,43 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
             Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: r.formMaxWidth),
-                child: _buildFormCard(r),
+                child: _emailSent
+                    ? _buildSuccessCard(r)
+                    : _buildFormCard(r),
               ),
             )
           else
-            _buildFormCard(r),
+            (_emailSent ? _buildSuccessCard(r) : _buildFormCard(r)),
           SizedBox(height: r.fieldSpacing),
-          _buildSignUpRow(r),
+          _buildBackToSignIn(r),
           const SizedBox(height: 36),
         ],
+      ),
+    );
+  }
+
+  // ─── Back button ─────────────────────────────────────────────────────────
+
+  Widget _buildBackButton() {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pop(),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimary, size: 16),
       ),
     );
   }
@@ -193,26 +228,9 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
     return Stack(
       children: [
         Positioned(
-          top: -80,
-          right: -80,
+          top: -80, right: -60,
           child: Container(
-            width: 280,
-            height: 280,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [
-                AppColors.secondary.withValues(alpha: 0.22),
-                Colors.transparent,
-              ]),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -60,
-          left: -60,
-          child: Container(
-            width: 220,
-            height: 220,
+            width: 260, height: 260,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(colors: [
@@ -222,11 +240,24 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
             ),
           ),
         ),
+        Positioned(
+          bottom: -60, left: -60,
+          child: Container(
+            width: 200, height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [
+                AppColors.secondary.withValues(alpha: 0.15),
+                Colors.transparent,
+              ]),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  // ─── Branding Panel (desktop only) ────────────────────────────────────────
+  // ─── Branding Panel (desktop) ─────────────────────────────────────────────
 
   Widget _buildBrandingPanel() {
     return Container(
@@ -252,8 +283,8 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
             child: _blurCircle(360, Colors.white.withValues(alpha: 0.05)),
           ),
           Positioned(
-            top: 200, right: -40,
-            child: _blurCircle(180, Colors.white.withValues(alpha: 0.08)),
+            top: 220, right: -40,
+            child: _blurCircle(160, Colors.white.withValues(alpha: 0.08)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 64),
@@ -262,8 +293,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 64, height: 64,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(18),
@@ -271,12 +301,12 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
                         color: Colors.white.withValues(alpha: 0.3),
                         width: 1.5),
                   ),
-                  child: const Icon(Icons.school_rounded,
+                  child: const Icon(Icons.lock_reset_rounded,
                       color: Colors.white, size: 34),
                 ),
                 const SizedBox(height: 32),
                 const Text(
-                  'Welcome\nBack,\nTeacher!',
+                  'Forgot Your\nPassword?',
                   style: TextStyle(
                     fontSize: 38,
                     fontWeight: FontWeight.w800,
@@ -287,7 +317,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Sign in to access your dashboard,\nstudent records, and more.',
+                  'No worries! Enter your email and we\'ll\nsend you a link to reset your password.',
                   style: TextStyle(
                     fontSize: 15,
                     color: Colors.white.withValues(alpha: 0.78),
@@ -296,10 +326,10 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
                 ),
                 const SizedBox(height: 48),
                 ...[
-                  ('📋', 'Manage student records easily'),
-                  ('📊', 'Track grades & performance'),
-                  ('🏫', 'Multi-department access'),
-                  ('🔒', 'Secure & encrypted sessions'),
+                  ('📧', 'Check your inbox for the link'),
+                  ('⏱️', 'Link expires in 15 minutes'),
+                  ('🔒', 'Secure password reset process'),
+                  ('🔁', 'Can resend if email not received'),
                 ].map((item) => Padding(
                       padding: const EdgeInsets.only(bottom: 14),
                       child: Row(
@@ -327,8 +357,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
   }
 
   Widget _blurCircle(double size, Color color) => Container(
-        width: size,
-        height: size,
+        width: size, height: size,
         decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       );
 
@@ -336,37 +365,36 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
 
   Widget _buildHeader(Responsive r) {
     final double iconSize    = r.choose(mobile: 52.0, tablet: 56.0, desktop: 60.0);
-    final double headingSize = r.choose(mobile: 28.0, tablet: 32.0, desktop: 34.0);
+    final double headingSize = r.choose(mobile: 26.0, tablet: 30.0, desktop: 32.0);
     final double subSize     = r.choose(mobile: 13.0, tablet: 13.5, desktop: 14.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Logo badge
+        // Icon badge
         Container(
-          width: iconSize,
-          height: iconSize,
+          width: iconSize, height: iconSize,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [AppColors.secondary, AppColors.primary],
+              colors: [Color(0xFF6366F1), AppColors.secondary],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppColors.secondary.withValues(alpha: 0.4),
+                color: AppColors.secondary.withValues(alpha: 0.35),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: Icon(Icons.login_rounded,
-              color: Colors.white, size: iconSize * 0.48),
+          child: Icon(Icons.lock_reset_rounded,
+              color: Colors.white, size: iconSize * 0.46),
         ),
         const SizedBox(height: 18),
         Text(
-          'Welcome Back',
+          'Forgot Password',
           style: TextStyle(
             fontSize: headingSize,
             fontWeight: FontWeight.w800,
@@ -376,7 +404,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
         ),
         const SizedBox(height: 6),
         Text(
-          'Sign in to your teacher account',
+          'Enter your email to receive a reset link',
           style: TextStyle(
             fontSize: subSize,
             color: AppColors.textSecondary,
@@ -419,7 +447,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
               hint: 'teacher@school.edu',
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
+              textInputAction: TextInputAction.done,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Email is required';
                 if (!RegExp(r'^[\w.-]+@[\w.-]+\.\w+$').hasMatch(v)) {
@@ -428,104 +456,199 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
                 return null;
               },
             ),
-            SizedBox(height: spacing),
+            SizedBox(height: spacing + 4),
 
-            // ── Password ───────────────────────────────────────────────────
-            AppInputField(
-              controller: _passwordController,
-              label: 'Password',
-              hint: 'Enter your password',
-              icon: Icons.lock_outline_rounded,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.done,
-              suffixIcon: _visibilityButton(
-                visible: _obscurePassword,
-                onTap: () =>
-                    setState(() => _obscurePassword = !_obscurePassword),
+            // ── Info note ──────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.2)),
               ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Password is required';
-                if (v.length < 8) return 'Min. 8 characters';
-                return null;
-              },
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      color: AppColors.primary,
+                      size: r.choose(mobile: 16.0, tablet: 17.0, desktop: 18.0)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'We\'ll send a password reset link to this email if it\'s registered.',
+                      style: TextStyle(
+                        fontSize:
+                            r.choose(mobile: 12.0, tablet: 12.5, desktop: 13.0),
+                        color: AppColors.primary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(height: spacing - 2),
-
-            // ── Remember me + Forgot password ──────────────────────────────
-            _buildRememberRow(r),
             SizedBox(height: spacing + 8),
 
-            // ── Sign In Button ─────────────────────────────────────────────
-            _buildSignInButton(r),
-
-            SizedBox(height: spacing),
-
-            // ── Divider ────────────────────────────────────────────────────
-            _buildDivider(),
-
-            SizedBox(height: spacing),
-
-            // ── Google SSO (placeholder) ───────────────────────────────────
-            _buildGoogleButton(r),
+            // ── Send Reset Link Button ─────────────────────────────────────
+            _buildSendButton(r),
           ],
         ),
       ),
     );
   }
 
-  // ─── Remember me + Forgot password row ────────────────────────────────────
+  // ─── Success Card ─────────────────────────────────────────────────────────
 
-  Widget _buildRememberRow(Responsive r) {
-    final double fontSize = r.choose(mobile: 12.5, tablet: 13.0, desktop: 13.0);
+  Widget _buildSuccessCard(Responsive r) {
+    final double fontSize = r.choose(mobile: 13.5, tablet: 14.0, desktop: 14.5);
+    final double titleSize = r.choose(mobile: 18.0, tablet: 20.0, desktop: 22.0);
 
-    return Row(
-      children: [
-        // Animated checkbox
-        GestureDetector(
-          onTap: () => setState(() => _rememberMe = !_rememberMe),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5),
-              gradient: _rememberMe
-                  ? const LinearGradient(
-                      colors: [AppColors.primary, AppColors.secondary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: _rememberMe ? null : Colors.transparent,
-              border: Border.all(
-                color: _rememberMe
-                    ? Colors.transparent
-                    : AppColors.textSecondary.withValues(alpha: 0.5),
-                width: 1.5,
+    return ScaleTransition(
+      scale: _successScaleAnim,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(r.cardPadding),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(
+              r.choose(mobile: 20.0, tablet: 24.0, desktop: 24.0)),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Success icon
+            Container(
+              width: 72, height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.success, Color(0xFF16A34A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.success.withValues(alpha: 0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.mark_email_read_rounded,
+                  color: Colors.white, size: 34),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Check Your Email!',
+              style: TextStyle(
+                fontSize: titleSize,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.3,
               ),
             ),
-            child: _rememberMe
-                ? const Icon(Icons.check, color: Colors.white, size: 12)
-                : null,
+            const SizedBox(height: 10),
+            Text(
+              'We\'ve sent a password reset link to',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: fontSize, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _emailController.text.trim(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Steps guide
+            _buildStepItem('1', 'Open your email inbox', fontSize),
+            const SizedBox(height: 10),
+            _buildStepItem('2', 'Click the reset link in the email', fontSize),
+            const SizedBox(height: 10),
+            _buildStepItem('3', 'Create your new password', fontSize),
+            const SizedBox(height: 28),
+
+            // Resend button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _isLoading ? null : _handleResend,
+                icon: _isLoading
+                    ? const SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary))
+                    : const Icon(Icons.refresh_rounded,
+                        size: 18, color: AppColors.primary),
+                label: Text(
+                  _isLoading ? 'Resending...' : 'Resend Email',
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(
+                      color: AppColors.primary, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepItem(String step, String text, double fontSize) {
+    return Row(
+      children: [
+        Container(
+          width: 26, height: 26,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.secondary],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              step,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
-        const SizedBox(width: 10),
-        Text(
-          'Remember me',
-          style: TextStyle(
-              fontSize: fontSize, color: AppColors.textSecondary),
-        ),
-        const Spacer(),
-        // Forgot password
-        GestureDetector(
-          onTap: _handleForgotPassword,
+        const SizedBox(width: 12),
+        Expanded(
           child: Text(
-            'Forgot password?',
+            text,
             style: TextStyle(
               fontSize: fontSize,
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.underline,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -533,9 +656,9 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
     );
   }
 
-  // ─── Sign In button ────────────────────────────────────────────────────────
+  // ─── Send Reset Link Button ────────────────────────────────────────────────
 
-  Widget _buildSignInButton(Responsive r) {
+  Widget _buildSendButton(Responsive r) {
     final double height   = r.choose(mobile: 50.0, tablet: 52.0, desktop: 54.0);
     final double fontSize = r.choose(mobile: 14.0, tablet: 15.0, desktop: 15.5);
 
@@ -545,7 +668,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.secondary, AppColors.primary],
+            colors: [Color(0xFF6366F1), AppColors.secondary],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -559,7 +682,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
           ],
         ),
         child: ElevatedButton(
-          onPressed: _isLoading ? null : _handleSignIn,
+          onPressed: _isLoading ? null : _handleSendReset,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
@@ -568,13 +691,11 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
           ),
           child: _isLoading
               ? const SizedBox(
-                  width: 22,
-                  height: 22,
+                  width: 22, height: 22,
                   child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2.4),
-                )
+                      color: Colors.white, strokeWidth: 2.4))
               : Text(
-                  'SIGN IN',
+                  'SEND RESET LINK',
                   style: TextStyle(
                     fontSize: fontSize,
                     fontWeight: FontWeight.w700,
@@ -587,86 +708,9 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
     );
   }
 
-  // ─── Divider ──────────────────────────────────────────────────────────────
+  // ─── Back to Sign In ──────────────────────────────────────────────────────
 
-  Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-              color: AppColors.border, thickness: 1),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'or continue with',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Divider(
-              color: AppColors.border, thickness: 1),
-        ),
-      ],
-    );
-  }
-
-  // ─── Google SSO button ────────────────────────────────────────────────────
-
-  Widget _buildGoogleButton(Responsive r) {
-    final double height   = r.choose(mobile: 48.0, tablet: 50.0, desktop: 52.0);
-    final double fontSize = r.choose(mobile: 13.5, tablet: 14.0, desktop: 14.5);
-
-    return SizedBox(
-      width: double.infinity,
-      height: height,
-      child: OutlinedButton.icon(
-        onPressed: () {},
-        icon: const Text('G',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF4285F4),
-            )),
-        label: Text(
-          'Sign in with Google',
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.surface,
-          side: const BorderSide(color: AppColors.border, width: 1.4),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14)),
-        ),
-      ),
-    );
-  }
-
-  // ─── Visibility toggle ────────────────────────────────────────────────────
-
-  Widget _visibilityButton(
-      {required bool visible, required VoidCallback onTap}) {
-    return IconButton(
-      icon: Icon(
-        visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-        color: AppColors.textSecondary,
-        size: 20,
-      ),
-      onPressed: onTap,
-    );
-  }
-
-  // ─── Sign Up Row ──────────────────────────────────────────────────────────
-
-  Widget _buildSignUpRow(Responsive r) {
+  Widget _buildBackToSignIn(Responsive r) {
     final double fontSize = r.choose(mobile: 13.5, tablet: 14.0, desktop: 14.0);
 
     return Center(
@@ -675,9 +719,9 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
           style:
               TextStyle(fontSize: fontSize, color: AppColors.textSecondary),
           children: [
-            const TextSpan(text: "Don't have an account?  "),
+            const TextSpan(text: 'Remember your password?  '),
             TextSpan(
-              text: 'Sign Up',
+              text: 'Sign In',
               style: const TextStyle(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w700,
@@ -685,10 +729,9 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
               ),
               recognizer: TapGestureRecognizer()
                 ..onTap = () {
-                  Navigator.of(context).push(
+                  Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (_) => const TeacherSignUpScreen(),
-                    ),
+                        builder: (_) => const TeacherSignInScreen()),
                   );
                 },
             ),
