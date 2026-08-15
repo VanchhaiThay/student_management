@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/teacher_signup_screen.dart';
+import 'screens/teacher_signin_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Roboto',
         useMaterial3: true,
       ),
-      home: const TeacherSignUpScreen(),
+      home: const TeacherSignInScreen(),
     );
   }
 }

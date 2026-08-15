@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import '../theme/app_colors.dart';
 import '../widgets/widgets.dart';
+import 'teacher_signin_screen.dart';
 
 class TeacherSignUpScreen extends StatefulWidget {
   const TeacherSignUpScreen({super.key});
@@ -180,8 +181,6 @@ class _TeacherSignUpScreenState extends State<TeacherSignUpScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Header(),
-        SizedBox(height: spacing * 1.6),
         _FormCard(
           formKey: _formKey,
           r: r,
@@ -204,8 +203,6 @@ class _TeacherSignUpScreenState extends State<TeacherSignUpScreen>
           onToggleConfirm: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
           onSubmit: _handleSignUp,
         ),
-        SizedBox(height: spacing),
-        _SignInRow(),
       ],
     );
   }
@@ -754,7 +751,14 @@ class _SignInRow extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 decoration: TextDecoration.underline,
               ),
-              recognizer: TapGestureRecognizer()..onTap = () {},
+              recognizer: TapGestureRecognizer()
+                ..onTap = () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => const TeacherSignInScreen(),
+                    ),
+                  );
+                },
             ),
           ],
         ),
