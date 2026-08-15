@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/providers/auth_provider.dart';
 import 'package:flutter/gestures.dart';
 import '../theme/app_colors.dart';
 import '../utils/responsive.dart';
 import '../widgets/app_input_field.dart';
-import '../core/api/auth_api.dart';
+
 import 'teacher_signup_screen.dart';
 import 'forgot_password_screen.dart';
 
-class TeacherSignInScreen extends StatefulWidget {
+class TeacherSignInScreen extends ConsumerStatefulWidget {
   const TeacherSignInScreen({super.key});
 
   @override
-  State<TeacherSignInScreen> createState() => _TeacherSignInScreenState();
+  ConsumerState<TeacherSignInScreen> createState() => _TeacherSignInScreenState();
 }
 
-class _TeacherSignInScreenState extends State<TeacherSignInScreen>
+class _TeacherSignInScreenState extends ConsumerState<TeacherSignInScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
@@ -24,7 +26,7 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
 
   bool _obscurePassword = true;
   bool _rememberMe      = false;
-  bool _isLoading       = false;
+  bool get _isLoading => ref.watch(authProvider).isLoading;
 
   late AnimationController _animController;
   late Animation<double>   _fadeAnim;
@@ -61,43 +63,28 @@ class _TeacherSignInScreenState extends State<TeacherSignInScreen>
 
   void _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
     
-    try {
-      final response = await AuthApi().signIn(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+    final success = await ref.read(authProvider.notifier).signIn(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
 
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Signed in successfully! 🎉'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-        // You could parse the token from response.body here and navigate
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Invalid email or password.'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Network error: $e'),
+          content: const Text('Signed in securely via JWT! 🚀'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } else {
+      final error = ref.read(authProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error ?? 'Invalid email or password.'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

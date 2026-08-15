@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/providers/auth_provider.dart';
 import 'package:flutter/gestures.dart';
 import '../theme/app_colors.dart';
 import '../widgets/widgets.dart';
-import '../core/api/auth_api.dart';
+
 import 'teacher_signin_screen.dart';
 
-class TeacherSignUpScreen extends StatefulWidget {
+class TeacherSignUpScreen extends ConsumerStatefulWidget {
   const TeacherSignUpScreen({super.key});
 
   @override
-  State<TeacherSignUpScreen> createState() => _TeacherSignUpScreenState();
+  ConsumerState<TeacherSignUpScreen> createState() => _TeacherSignUpScreenState();
 }
 
-class _TeacherSignUpScreenState extends State<TeacherSignUpScreen>
+class _TeacherSignUpScreenState extends ConsumerState<TeacherSignUpScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
@@ -27,7 +29,7 @@ class _TeacherSignUpScreenState extends State<TeacherSignUpScreen>
   bool _agreeToTerms           = false;
   bool _obscurePassword        = true;
   bool _obscureConfirmPassword = true;
-  bool _isLoading              = false;
+  bool get _isLoading => ref.watch(authProvider).isLoading;
   String? _selectedDepartment;
 
   late AnimationController _animController;
@@ -80,57 +82,45 @@ class _TeacherSignUpScreenState extends State<TeacherSignUpScreen>
       ));
       return;
     }
-    setState(() => _isLoading = true);
     
-    try {
-      final response = await AuthApi().signUp(
-        fullName: _fullNameController.text.trim(),
-        email: _emailController.text.trim(),
-        phoneNumber: _phoneController.text.trim(),
-        teacherId: _teacherIdController.text.trim(),
-        department: _selectedDepartment ?? 'Other',
-        password: _passwordController.text,
-      );
+    final success = await ref.read(authProvider.notifier).signUp(
+      fullName: _fullNameController.text.trim(),
+      email: _emailController.text.trim(),
+      phoneNumber: _phoneController.text.trim(),
+      teacherId: _teacherIdController.text.trim(),
+      department: _selectedDepartment ?? 'Other',
+      password: _passwordController.text,
+    );
 
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    if (!mounted) return;
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('Account created successfully! 🎉'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ));
-        
-        _formKey.currentState!.reset();
-        _fullNameController.clear();
-        _emailController.clear();
-        _phoneController.clear();
-        _teacherIdController.clear();
-        _passwordController.clear();
-        _confirmPasswordController.clear();
-        setState(() {
-          _selectedDepartment = null;
-          _agreeToTerms = false;
-        });
-        
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const TeacherSignInScreen()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Failed to sign up: ${response.body}'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Network error: $e'),
+        content: const Text('Account created successfully! 🎉'),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+      
+      _formKey.currentState!.reset();
+      _fullNameController.clear();
+      _emailController.clear();
+      _phoneController.clear();
+      _teacherIdController.clear();
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+      setState(() {
+        _selectedDepartment = null;
+        _agreeToTerms = false;
+      });
+      
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const TeacherSignInScreen()),
+      );
+    } else {
+      final error = ref.read(authProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(error ?? 'Registration failed.'),
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
