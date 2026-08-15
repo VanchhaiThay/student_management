@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import '../theme/app_colors.dart';
 import '../widgets/widgets.dart';
+import '../core/api/auth_api.dart';
 import 'teacher_signin_screen.dart';
 
 class TeacherSignUpScreen extends StatefulWidget {
@@ -80,15 +81,61 @@ class _TeacherSignUpScreenState extends State<TeacherSignUpScreen>
       return;
     }
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isLoading = false);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Account created successfully! 🎉'),
-      backgroundColor: AppColors.success,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
+    
+    try {
+      final response = await AuthApi().signUp(
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        teacherId: _teacherIdController.text.trim(),
+        department: _selectedDepartment ?? 'Other',
+        password: _passwordController.text,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Account created successfully! 🎉'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+        
+        _formKey.currentState!.reset();
+        _fullNameController.clear();
+        _emailController.clear();
+        _phoneController.clear();
+        _teacherIdController.clear();
+        _passwordController.clear();
+        _confirmPasswordController.clear();
+        setState(() {
+          _selectedDepartment = null;
+          _agreeToTerms = false;
+        });
+        
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const TeacherSignInScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to sign up: ${response.body}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Network error: $e'),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
   }
 
   // ── Build ────────────────────────────────────────────────────────────────────
