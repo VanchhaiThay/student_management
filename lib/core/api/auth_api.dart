@@ -31,4 +31,16 @@ class AuthApi {
     );
     return response;
   }
+
+  Future<http.Response> signIn(String email, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/signin'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+      }),
+    );
+    return response;
+  }
 }
