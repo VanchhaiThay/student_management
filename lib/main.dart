@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/teacher_signin_screen.dart';
+import 'screens/main_layout_screen.dart';
 import 'core/providers/auth_provider.dart';
 
 void main() async {
@@ -32,39 +33,8 @@ class MyApp extends ConsumerWidget {
       // If a token exists, the user is logged in! Route them to the Dashboard.
       // Otherwise, route them to the Sign In screen.
       home: authState.token != null 
-          ? const PlaceholderDashboard() 
+          ? const MainLayoutScreen() 
           : const TeacherSignInScreen(),
-    );
-  }
-}
-
-// A temporary placeholder screen for when the user is authenticated.
-// We can build the real Dashboard here later!
-class PlaceholderDashboard extends ConsumerWidget {
-  const PlaceholderDashboard({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              // Easily log out using Riverpod!
-              ref.read(authProvider.notifier).logout();
-            },
-          )
-        ],
-      ),
-      body: const Center(
-        child: Text(
-          'Welcome to your Dashboard!\nYou are securely logged in.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 18),
-        ),
-      ),
     );
   }
 }
