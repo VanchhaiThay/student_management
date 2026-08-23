@@ -9,37 +9,37 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFBFF), // Light, very subtle blue background from mockup
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(ref),
+              _buildHeader(context, ref),
               const SizedBox(height: 24),
-              _buildSearchBar(),
+              _buildSearchBar(context),
               const SizedBox(height: 32),
-              _buildStatCardsRow(),
+              _buildStatCardsRow(context),
               const SizedBox(height: 32),
-              _buildSectionTitle('Today''s Schedule', 'View All'),
+              _buildSectionTitle(context, 'Today''s Schedule', 'View All'),
               const SizedBox(height: 16),
-              _buildHorizontalSchedule(),
+              _buildHorizontalSchedule(context),
               const SizedBox(height: 32),
-              const Text(
+              Text(
                 'Quick Actions',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1E293B),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
-              _buildQuickActionsRow(),
+              _buildQuickActionsRow(context),
               const SizedBox(height: 32),
-              _buildSectionTitle('Recent Inquiries', 'View Inquiries'),
+              _buildSectionTitle(context, 'Recent Inquiries', 'View Inquiries'),
               const SizedBox(height: 16),
-              _buildRecentInquiriesList(),
+              _buildRecentInquiriesList(context),
               const SizedBox(height: 32),
             ],
           ),
@@ -48,7 +48,25 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(WidgetRef ref) {
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'GOOD MORNING';
+    }
+    if (hour < 17) {
+      return 'GOOD AFTERNOON';
+    }
+    if (hour < 20) {
+      return 'GOOD EVENING';
+    }
+    return 'GOOD NIGHT';
+  }
+
+  Widget _buildHeader(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).user;
+    final displayName = user?.displayName ?? 'Prof. Sarah Jenkins';
+    final avatarSeed = user?.displayName ?? 'Sarah Jenkins';
+
     return Row(
       children: [
         PopupMenuButton<String>(
@@ -71,32 +89,42 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ],
-          child: const CircleAvatar(
+          child: CircleAvatar(
             radius: 24,
-            backgroundImage: NetworkImage('https://api.dicebear.com/7.x/initials/png?seed=Sarah+Jenkins'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: ClipOval(
+              child: Image.network(
+                'https://api.dicebear.com/7.x/initials/png?seed=${Uri.encodeComponent(avatarSeed)}',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Text(
+                  user?.initials ?? 'T',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               Text(
-                'GOOD MORNING',
+                _getGreeting(),
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF64748B),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   letterSpacing: 1.2,
                 ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
-                'Prof. Sarah Jenkins',
+                displayName,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF1E293B),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -105,11 +133,11 @@ class HomeScreen extends ConsumerWidget {
         Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            color: Colors.white,
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF64748B), size: 24),
+            icon: Icon(Icons.notifications_none_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 24),
             onPressed: () {},
           ),
         ),
@@ -117,17 +145,18 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9), // Slight greyish/blueish background
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
       ),
       child: TextField(
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         decoration: InputDecoration(
           hintText: 'Search students or records...',
-          hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontWeight: FontWeight.w500),
-          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF94A3B8), size: 20),
+          hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500),
+          prefixIcon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
@@ -135,7 +164,9 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCardsRow() {
+  Widget _buildStatCardsRow(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Row(
       children: [
         // Left Card - Blue
@@ -143,11 +174,11 @@ class HomeScreen extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF3B82F6), // Vibrant blue
+              color: Theme.of(context).colorScheme.primary, // Vibrant blue
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -192,15 +223,17 @@ class HomeScreen extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
+                if (!isDark)
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
               ],
+              border: isDark ? Border.all(color: Theme.of(context).colorScheme.outlineVariant) : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,21 +247,21 @@ class HomeScreen extends ConsumerWidget {
                   child: const Icon(Icons.calendar_today_rounded, color: Color(0xFFF97316), size: 20),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   '98%',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF1E293B),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
+                Text(
                   'Avg Attendance',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -239,31 +272,32 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title, String actionText) {
+  Widget _buildSectionTitle(BuildContext context, String title, String actionText) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1E293B),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         Text(
           actionText,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF3B82F6),
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildHorizontalSchedule() {
+  Widget _buildHorizontalSchedule(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       height: 180,
       child: ListView(
@@ -271,6 +305,7 @@ class HomeScreen extends ConsumerWidget {
         clipBehavior: Clip.none,
         children: [
           _buildScheduleCard(
+            context,
             'UPCOMING',
             const Color(0xFFDBEAFE),
             const Color(0xFF1D4ED8),
@@ -281,9 +316,10 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 16),
           _buildScheduleCard(
+            context,
             'LATER',
-            const Color(0xFFF1F5F9),
-            const Color(0xFF64748B),
+            isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+            isDark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
             '11:00 AM',
             'Quantum Mechanics',
             'Lab B4',
@@ -295,15 +331,16 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildScheduleCard(
-      String tag, Color tagBgColor, Color tagTextColor, String time, String title, String subtitle, bool isActive) {
+      BuildContext context, String tag, Color tagBgColor, Color tagTextColor, String time, String title, String subtitle, bool isActive) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: 280,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-        boxShadow: isActive
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant, width: 1.5),
+        boxShadow: (isActive && !isDark)
             ? [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.03),
@@ -332,23 +369,23 @@ class HomeScreen extends ConsumerWidget {
               ),
               Text(
                 time,
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF94A3B8)),
+              Icon(Icons.location_on_outlined, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(
                 subtitle,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -356,12 +393,12 @@ class HomeScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildAvatarGroup(),
+              _buildAvatarGroup(context),
               if (isActive)
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6),
+                    color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
@@ -373,26 +410,26 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAvatarGroup() {
+  Widget _buildAvatarGroup(BuildContext context) {
     return Row(
       children: [
-        _buildStackedAvatar('https://api.dicebear.com/7.x/initials/png?seed=Alex', 0),
-        _buildStackedAvatar('https://api.dicebear.com/7.x/initials/png?seed=B', 1),
-        _buildStackedAvatar('https://api.dicebear.com/7.x/initials/png?seed=C', 2),
+        _buildStackedAvatar(context, 'https://api.dicebear.com/7.x/initials/png?seed=Alex', 0),
+        _buildStackedAvatar(context, 'https://api.dicebear.com/7.x/initials/png?seed=B', 1),
+        _buildStackedAvatar(context, 'https://api.dicebear.com/7.x/initials/png?seed=C', 2),
         Transform.translate(
           offset: const Offset(-24, 0),
           child: Container(
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
             ),
             alignment: Alignment.center,
-            child: const Text(
+            child: Text(
               '+24',
-              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
         ),
@@ -400,7 +437,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStackedAvatar(String url, int index) {
+  Widget _buildStackedAvatar(BuildContext context, String url, int index) {
     return Transform.translate(
       offset: Offset(-12.0 * index, 0),
       child: Container(
@@ -408,7 +445,7 @@ class HomeScreen extends ConsumerWidget {
         height: 28,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
+          border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
           image: DecorationImage(
             image: NetworkImage(url),
             fit: BoxFit.cover,
@@ -418,38 +455,41 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActionsRow() {
+  Widget _buildQuickActionsRow(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildQuickActionItem('Attendance', Icons.show_chart_rounded, const Color(0xFFEFF6FF), const Color(0xFF3B82F6)),
-        _buildQuickActionItem('Grades', Icons.assignment_rounded, const Color(0xFFFAF5FF), const Color(0xFFA855F7)), 
-        _buildQuickActionItem('Announce', Icons.campaign_outlined, const Color(0xFFFFF7ED), const Color(0xFFF97316)),
-        _buildQuickActionItem('Events', Icons.calendar_month_outlined, const Color(0xFFECFDF5), const Color(0xFF10B981)),
+        _buildQuickActionItem(context, 'Attendance', Icons.show_chart_rounded, const Color(0xFFEFF6FF), const Color(0xFF3B82F6)),
+        _buildQuickActionItem(context, 'Grades', Icons.assignment_rounded, const Color(0xFFFAF5FF), const Color(0xFFA855F7)), 
+        _buildQuickActionItem(context, 'Announce', Icons.campaign_outlined, const Color(0xFFFFF7ED), const Color(0xFFF97316)),
+        _buildQuickActionItem(context, 'Events', Icons.calendar_month_outlined, const Color(0xFFECFDF5), const Color(0xFF10B981)),
       ],
     );
   }
 
-  Widget _buildQuickActionItem(String label, IconData icon, Color bgColor, Color iconColor) {
+  Widget _buildQuickActionItem(BuildContext context, String label, IconData icon, Color bgColor, Color iconColor) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
+            border: isDark ? Border.all(color: Theme.of(context).colorScheme.outlineVariant) : null,
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
+              if (!isDark)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
             ],
           ),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: bgColor,
+              color: isDark ? iconColor.withValues(alpha: 0.15) : bgColor,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: iconColor, size: 24),
@@ -458,26 +498,28 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1E293B),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildRecentInquiriesList() {
+  Widget _buildRecentInquiriesList(BuildContext context) {
     return Column(
       children: [
         _buildInquiryTile(
+          context,
           'Marcus Thorne',
           'Physics 302 • 10m ago',
           'https://api.dicebear.com/7.x/initials/png?seed=Marcus+Thorne',
         ),
         const SizedBox(height: 12),
         _buildInquiryTile(
+          context,
           'Lydia Vance',
           'Lab B4 • 2h ago',
           'https://api.dicebear.com/7.x/initials/png?seed=Lydia+Vance',
@@ -486,19 +528,21 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInquiryTile(String name, String subtext, String avatarUrl) {
+  Widget _buildInquiryTile(BuildContext context, String name, String subtext, String avatarUrl) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant, width: 1.5),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
         ],
       ),
       child: Row(
@@ -514,12 +558,12 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtext,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -527,11 +571,11 @@ class HomeScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
             ),
-            child: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF64748B), size: 16),
+            child: Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 16),
           ),
         ],
       ),

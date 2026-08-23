@@ -4,7 +4,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/teacher_signin_screen.dart';
 import 'screens/main_layout_screen.dart';
 import 'core/providers/auth_provider.dart';
-
+import 'theme/app_theme.dart';
+import 'core/providers/theme_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
@@ -18,18 +19,15 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the auth state to see if the user has a token
     final authState = ref.watch(authProvider);
+    // Watch the theme state for dark mode
+    final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
       title: 'Student Management System',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4F46E5),
-          brightness: Brightness.light,
-        ),
-        fontFamily: 'Roboto',
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       // If a token exists, the user is logged in! Route them to the Dashboard.
       // Otherwise, route them to the Sign In screen.
       home: authState.token != null 

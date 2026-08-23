@@ -8,10 +8,11 @@ abstract final class AppColors {
   // ── Brand ────────────────────────────────────────────────────────────────
   static const Color primary   = Color(0xFF4F46E5); // Indigo 600
   static const Color secondary = Color(0xFF7C3AED); // Violet 600
+  static const Color accent    = Color(0xFF14B8A6); // Teal 500
 
   // ── Backgrounds ──────────────────────────────────────────────────────────
-  static const Color background = Color(0xFFF4F6FB);
-  static const Color surface    = Colors.white;
+  static const Color background = Color(0xFFFAFAFA); // Soft Snow White
+  static const Color surface    = Colors.white; // Pure White for cards
   static const Color inputFill  = Color(0xFFF8F9FC);
 
   // ── Borders ───────────────────────────────────────────────────────────────
